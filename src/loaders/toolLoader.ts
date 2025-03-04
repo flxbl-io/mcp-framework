@@ -64,6 +64,42 @@ export class ToolLoader {
     return isValid;
   }
 
+  private async scanDirectory(dirPath: string): Promise<ToolProtocol[]> {
+    const tools: ToolProtocol[] = [];
+    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      const fullPath = join(dirPath, entry.name);
+      
+      if (entry.isDirectory()) {
+        // Recursively scan subdirectories
+        const subDirTools = await this.scanDirectory(fullPath);
+        tools.push(...subDirTools);
+      } else if (this.isToolFile(entry.name)) {
+        try {
+          logger.debug(`Attempting to load tool from: ${fullPath}`);
+
+          const importPath = `file://${fullPath}`;
+          const { default: ToolClass } = await import(importPath);
+
+          if (!ToolClass) {
+            logger.warn(`No default export found in ${entry.name}`);
+            continue;
+          }
+
+          const tool = new ToolClass();
+          if (this.validateTool(tool)) {
+            tools.push(tool);
+          }
+        } catch (error) {
+          logger.error(`Error loading tool ${entry.name}: ${error}`);
+        }
+      }
+    }
+    
+    return tools;
+  }
+
   async loadTools(): Promise<ToolProtocol[]> {
     try {
       logger.debug(`Attempting to load tools from: ${this.TOOLS_DIR}`);
@@ -81,36 +117,8 @@ export class ToolLoader {
         return [];
       }
 
-      const files = await fs.readdir(this.TOOLS_DIR);
-      logger.debug(`Found files in directory: ${files.join(", ")}`);
-
-      const tools: ToolProtocol[] = [];
-
-      for (const file of files) {
-        if (!this.isToolFile(file)) {
-          continue;
-        }
-
-        try {
-          const fullPath = join(this.TOOLS_DIR, file);
-          logger.debug(`Attempting to load tool from: ${fullPath}`);
-
-          const importPath = `file://${fullPath}`;
-          const { default: ToolClass } = await import(importPath);
-
-          if (!ToolClass) {
-            logger.warn(`No default export found in ${file}`);
-            continue;
-          }
-
-          const tool = new ToolClass();
-          if (this.validateTool(tool)) {
-            tools.push(tool);
-          }
-        } catch (error) {
-          logger.error(`Error loading tool ${file}: ${error}`);
-        }
-      }
+      // Use the recursive scan method to find tools in all subdirectories
+      const tools = await this.scanDirectory(this.TOOLS_DIR);
 
       logger.debug(
         `Successfully loaded ${tools.length} tools: ${tools
