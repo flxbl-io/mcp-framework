@@ -1,5 +1,8 @@
 # MCP Framework
 
+> This is a forked version of [QuantGeekDev/mcp-framework](https://github.com/QuantGeekDev/mcp-framework)
+> The fork is maintained at [flxbl-io/mcp-framework](https://github.com/flxbl-io/mcp-framework)
+
 MCP-Framework is a framework for building Model Context Protocol (MCP) servers elegantly in TypeScript.
 
 MCP-Framework gives you architecture out of the box, with automatic directory-based discovery for tools, resources, and prompts. Use our powerful MCP abstractions to define tools, resources, or prompts in an elegant way. Our cli makes getting started with your own MCP server a breeze
